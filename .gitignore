@@ -1,3 +1,12 @@
 venv
 /__pycache__/
 .env
+__pycache__
+backend/StackIt/StackIt/__pycache__/
+*/migrations/
+**/migrations/
+migrations
+backend/StackIt/accounts/migrations
+backend/**/migrations/
+backend/**/migrations/*.py
+backend/**/migrations/*.pyc
