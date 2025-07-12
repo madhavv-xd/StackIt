@@ -9,7 +9,6 @@ class TagSerializer(serializers.ModelSerializer):
         read_only_fields = ['id']
 
     def validate_name(self, value):
-        # Ensure tag name is unique (case-insensitive)
         if self.instance is None and Tag.objects.filter(name__iexact=value).exists():
             raise serializers.ValidationError("Tag with this name already exists.")
         return value
@@ -18,6 +17,19 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'username']
+
+class AnswerSerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only=True)
+    
+    class Meta:
+        model = Answer
+        fields = ['id', 'user', 'content', 'created_at', 'updated_at', 'is_accepted', 'is_active', 'vote_score']
+        read_only_fields = ['id', 'user', 'created_at', 'updated_at', 'is_accepted', 'is_active', 'vote_score']
+
+    def validate_content(self, value):
+        if not value.strip():
+            raise serializers.ValidationError("Answer content cannot be empty.")
+        return value
 
 class QuestionSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
@@ -32,7 +44,6 @@ class QuestionSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'user', 'tags', 'created_at', 'updated_at', 'is_active', 'num_answers']
 
     def validate_tag_names(self, value):
-        # Ensure tag names are valid and non-empty
         for name in value:
             if not name.strip():
                 raise serializers.ValidationError("Tag names cannot be empty.")
@@ -44,8 +55,6 @@ class QuestionSerializer(serializers.ModelSerializer):
         tag_names = validated_data.pop('tag_names', [])
         user = self.context['request'].user
         question = Question.objects.create(**validated_data)
-        
-        # Handle tags: create or get existing
         tags = []
         for name in tag_names:
             tag, _ = Tag.objects.get_or_create(
