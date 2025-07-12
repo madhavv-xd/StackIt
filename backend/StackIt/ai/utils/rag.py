@@ -1,42 +1,57 @@
 # ai/utils/rag.py
 import faiss
 import pickle
+import os
 from sentence_transformers import SentenceTransformer
 from openai import OpenAI
 from dotenv import load_dotenv
-import os
 
 load_dotenv()
 
-# ✅ Load model + index
 model = SentenceTransformer("all-MiniLM-L6-v2")
-index = faiss.read_index("ai/faiss_data/answers.index")
-
-with open("ai/faiss_data/answers_meta.pkl", "rb") as f:
-    metadata = pickle.load(f)
-
 client = OpenAI(
     api_key=os.getenv("OPENROUTER_API_KEY"),
     base_url="https://openrouter.ai/api/v1/"
 )
 
-def get_relevant_context(query, k=4):
-    vector = model.encode([query])
-    _, indices = index.search(vector, k)
-    return [metadata[i] for i in indices[0]]
+# Load FAISS index & metadata
+index = faiss.read_index("ai/faiss_data/answers.index")
+with open("ai/faiss_data/answers_meta.pkl", "rb") as f:
+    metadata = pickle.load(f)
+
+
+def get_relevant_context(query, k=4, relevance_threshold=0.65):
+    """Search FAISS and filter based on distance threshold."""
+    query_vector = model.encode([query])
+    D, I = index.search(query_vector, k)
+
+    context = []
+    for dist, idx in zip(D[0], I[0]):
+        if idx == -1:
+            continue  # no more matches
+        similarity = 1 - dist  # L2 distance → cosine-like
+        if similarity >= relevance_threshold:
+            context.append(metadata[idx])
+    return context
+
 
 def build_prompt(contexts, question):
-    context_text = "\n\n".join(
-        [f"Q: {c['question']}\nA: {c['content']}" for c in contexts]
-    )
+    if contexts:
+        context_block = "\n\n".join([f"Q: {c['question']}\nA: {c['content']}" for c in contexts])
+    else:
+        context_block = "*no relevant data available*"
+
     return f"""
 You are StackIt, an AI agent for a Q&A platform. For every question, you first search StackIt's existing answers for relevant information.
 
-👉 If you find an answer in the context below, answer the user's question using ONLY that context.
-👉 If the answer is NOT found in the context, honestly say: "StackIt does not have answers to this question yet. Here is an answer from the web:" and then provide your best response.
+👉 If you find a relevant answer in the context below, answer the user's question using ONLY that context.
+
+👉 If no helpful context is found, say:
+"StackIt does not have answers to this question yet. Here is an answer from the web:"
+...and then continue with your own general answer.
 
 --- CONTEXT START ---
-{context_text}
+{context_block}
 --- CONTEXT END ---
 
 User's Question:
@@ -47,11 +62,12 @@ Your Answer:
 
 
 def answer_with_rag(question):
-    contexts = get_relevant_context(question)
-    prompt = build_prompt(contexts, question)
+    context = get_relevant_context(question)
+    prompt = build_prompt(context, question)
 
     response = client.chat.completions.create(
         model="mistralai/mistral-7b-instruct:free",
         messages=[{"role": "user", "content": prompt}],
     )
-    return response.choices[0].message.content
+
+    return response.choices[0].message.content.strip()
