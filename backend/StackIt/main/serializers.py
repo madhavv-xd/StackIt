@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import Question, Tag, Answer, Comment, Vote, Notification
-from StackIt.accounts.models import UserProfile as User
+from accounts.models import UserProfile as User
 
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
