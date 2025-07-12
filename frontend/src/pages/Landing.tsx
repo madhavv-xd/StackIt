@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { MessageCircle, Users, Trophy, Bell, ArrowRight, Star, Code, Lightbulb, Heart, Zap, Target, BookOpen, Github, Twitter, Linkedin } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 // Header Component
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <header className="bg-slate-800 text-white border-b border-slate-700">
@@ -22,7 +24,7 @@ const Header = () => {
             <a href="#features" className="hover:text-purple-400 transition-colors">Features</a>
             <a href="#community" className="hover:text-purple-400 transition-colors">Community</a>
             <a href="#about" className="hover:text-purple-400 transition-colors">About</a>
-            <button className="bg-gradient-to-r from-purple-500 to-blue-500 px-6 py-2 rounded-full hover:from-purple-600 hover:to-blue-600 transition-all transform hover:scale-105">
+            <button onClick={()=> navigate("/auth")} className="bg-gradient-to-r from-purple-500 to-blue-500 px-6 py-2 rounded-full hover:from-purple-600 hover:to-blue-600 transition-all transform hover:scale-105">
               Get Started
             </button>
           </nav>
@@ -45,6 +47,7 @@ const Header = () => {
 
 // Hero Section Component
 const HeroSection = () => {
+   const navigate = useNavigate();
   return (
     <section className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white py-20">
       <div className="container mx-auto px-6">
@@ -64,11 +67,11 @@ const HeroSection = () => {
             </div>
             
             <div className="flex flex-col sm:flex-row gap-4">
-              <button className="bg-gradient-to-r from-purple-500 to-blue-500 px-8 py-4 rounded-full text-lg font-semibold hover:from-purple-600 hover:to-blue-600 transition-all transform hover:scale-105 flex items-center justify-center space-x-2">
+              <button onClick={()=> navigate("/home")} className="bg-gradient-to-r from-purple-500 to-blue-500 px-8 py-4 rounded-full text-lg font-semibold hover:from-purple-600 hover:to-blue-600 transition-all transform hover:scale-105 flex items-center justify-center space-x-2">
                 <span>Start Asking</span>
                 <ArrowRight className="w-5 h-5" />
               </button>
-              <button className="border border-slate-600 px-8 py-4 rounded-full text-lg font-semibold hover:bg-slate-800 transition-all flex items-center justify-center space-x-2">
+              <button onClick={()=> navigate("/home")} className="border border-slate-600 px-8 py-4 rounded-full text-lg font-semibold hover:bg-slate-800 transition-all flex items-center justify-center space-x-2">
                 <span>Explore Questions</span>
                 <BookOpen className="w-5 h-5" />
               </button>

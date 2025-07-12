@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { Bell, User } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export default function StackItNavbar() {
   const [isSignedIn, setIsSignedIn] = useState(true); // Toggle this to test both states
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
 //   const [showTimeFilter, setShowTimeFilter] = useState(false);
+  const navigate=useNavigate();
 
   const handleLogin = () => {
     setIsSignedIn(true);
@@ -22,8 +24,8 @@ export default function StackItNavbar() {
       <nav className="px-6 py-4 border-b border-slate-700">
         <div className="flex items-center justify-between">
           {/* Logo */}
-          <div className="text-2xl font-bold">
-            StackIt
+          <div onClick={() => navigate("/")} className="text-2xl font-bold">
+          StackIt
           </div>
 
           {/* Right Side - Login/User Actions */}

@@ -6,6 +6,8 @@ import {
   MessageSquare,
 } from "lucide-react";
 
+import { useNavigate } from "react-router-dom";
+
 const QAHomepage = () => {
   const [activeTab, setActiveTab] = useState("Answers");
   const [sortBy, setSortBy] = useState("By rating");
@@ -15,7 +17,7 @@ const QAHomepage = () => {
   // const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState("Newest");
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
-
+  const navigate=useNavigate();
   const filterOptions = [
     "Newest",
     "Unanswered",
@@ -91,7 +93,7 @@ const QAHomepage = () => {
         <div className="max-w-6xl mx-auto">
           <div className="flex items-center space-x-4">
             {/* Ask New Question Button */}
-            <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium">
+            <button onClick={()=> navigate("/add-new-ques")} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium">
               Ask New question
             </button>
 
@@ -102,11 +104,11 @@ const QAHomepage = () => {
                 className="flex items-center space-x-2 border border-gray-500 text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-800 hover:border-gray-400 transition-colors"
               >
                 <span className="font-medium">{selectedFilter}</span>
-                <span className="text-gray-500">Unanswered</span>
+                {/* <span className="text-gray-500">Unanswered</span> */}
                 <div className="flex items-center space-x-1">
                   <span className="text-xs text-gray-400">more</span>
                   <ChevronDown className="w-4 h-4 text-gray-400" />
-                </div>
+                </div>w
               </button>
 
               {/* Dropdown Menu */}
@@ -148,9 +150,9 @@ const QAHomepage = () => {
         </div>
       </div>
 
-      <div className="flex w-[90%] justify-center">
-        {/* Main Content */}
-        <div className=" mx-auto px-4 py-8">
+      <div className="flex w-[90%] justify-center gap-8">
+        {/* Promo Panel */}
+        <div className="mx-auto px-4 py-8 flex-shrink-0 w-[20rem]">
           <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6">
             <div className="text-center mb-4">
               <div className="w-16 h-16 bg-blue-500 rounded-xl mx-auto mb-3 flex items-center justify-center">
@@ -166,9 +168,9 @@ const QAHomepage = () => {
           </div>
         </div>
 
-        {/* Main Content */}
-        <div className="p-6 mt-3">
-          <div className="bg-white rounded-lg shadow-sm  p-6">
+        {/* Questions Panel */}
+        <div className="p-6 mt-3 flex-grow w-[65rem]">
+          <div className="bg-white rounded-lg shadow-sm p-6">
             {/* Tabs */}
             <div className="flex space-x-8 mb-6 border-b">
               {["Answers", "Questions", "Experts"].map((tab) => (
