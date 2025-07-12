@@ -3,8 +3,8 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from django.core.validators import MinLengthValidator
 
-# Replace with django-ckeditor's RichTextField if using a specific rich text editor
-RichTextField = models.TextField  # Placeholder
+# Placeholder for rich text field (replace with django-ckeditor's RichTextField if used)
+RichTextField = models.TextField
 
 class Tag(models.Model):
     name = models.CharField(max_length=50, unique=True, validators=[MinLengthValidator(1)])
@@ -18,13 +18,14 @@ class Tag(models.Model):
 
 class Question(models.Model):
     title = models.CharField(max_length=255, validators=[MinLengthValidator(5)])
-    description = RichTextField()  # Use rich text editor in frontend
+    description = RichTextField()
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='questions')
     tags = models.ManyToManyField(Tag, related_name='questions')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    is_active = models.BooleanField(default=True)  # For admin moderation
-    num_answers = models.PositiveIntegerField(default=0, editable=False)  # Track number of answers
+    is_active = models.BooleanField(default=True)
+    num_answers = models.PositiveIntegerField(default=0, editable=False)
+    vote_score = models.IntegerField(default=0, editable=False)
     
     class Meta:
         ordering = ['-created_at']
@@ -35,12 +36,12 @@ class Question(models.Model):
 class Answer(models.Model):
     question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='answers')
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='answers')
-    content = RichTextField()  # Use rich text editor in frontend
+    content = RichTextField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_accepted = models.BooleanField(default=False)
-    is_active = models.BooleanField(default=True)  # For admin moderation
-    vote_score = models.IntegerField(default=0, editable=False)  # Net votes (upvotes - downvotes)
+    is_active = models.BooleanField(default=True)
+    vote_score = models.IntegerField(default=0, editable=False)
     
     def save(self, *args, **kwargs):
         is_new = self.pk is None
@@ -50,18 +51,15 @@ class Answer(models.Model):
         
         super().save(*args, **kwargs)
         
-        # Update num_answers
         if is_new and self.is_active:
             self.question.num_answers += 1
             self.question.save()
         elif not is_new and was_active != self.is_active:
-            # Recalculate if is_active changed (e.g., admin moderation)
             self.question.num_answers = self.question.answers.filter(is_active=True).count()
             self.question.save()
     
     def delete(self, *args, **kwargs):
         if self.is_active:
-            # Ensure num_answers doesn't go negative
             self.question.num_answers = max(0, self.question.answers.filter(is_active=True).count() - 1)
             self.question.save()
         super().delete(*args, **kwargs)
@@ -76,10 +74,10 @@ class Comment(models.Model):
     question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='comments', null=True, blank=True)
     answer = models.ForeignKey(Answer, on_delete=models.CASCADE, related_name='comments', null=True, blank=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='comments')
-    content = RichTextField()  # Use rich text editor for comments
+    content = RichTextField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    is_active = models.BooleanField(default=True)  # For admin moderation
+    is_active = models.BooleanField(default=True)
     
     class Meta:
         ordering = ['created_at']
@@ -95,7 +93,8 @@ class Vote(models.Model):
     )
     
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='votes')
-    answer = models.ForeignKey(Answer, on_delete=models.CASCADE, related_name='votes')
+    question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='votes', null=True, blank=True)
+    answer = models.ForeignKey(Answer, on_delete=models.CASCADE, related_name='votes', null=True, blank=True)
     vote_type = models.IntegerField(choices=VOTE_TYPES)
     created_at = models.DateTimeField(auto_now_add=True)
     
@@ -107,26 +106,36 @@ class Vote(models.Model):
         
         super().save(*args, **kwargs)
         
-        # Update vote_score
+        target = self.question if self.question else self.answer
         if is_new:
-            self.answer.vote_score += self.vote_type
-            self.answer.save()
+            target.vote_score += self.vote_type
+            target.save()
         elif was_vote_type != self.vote_type:
-            # Adjust score if vote_type changes (e.g., upvote to downvote)
-            self.answer.vote_score += (self.vote_type - was_vote_type)
-            self.answer.save()
+            target.vote_score += (self.vote_type - was_vote_type)
+            target.save()
     
     def delete(self, *args, **kwargs):
-        # Adjust vote_score on deletion
-        self.answer.vote_score -= self.vote_type
-        self.answer.save()
+        target = self.question if self.question else self.answer
+        target.vote_score -= self.vote_type
+        target.save()
         super().delete(*args, **kwargs)
     
     class Meta:
-        unique_together = ('user', 'answer')  # Prevent multiple votes from same user on same answer
+        unique_together = [
+            ('user', 'question'),
+            ('user', 'answer'),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                check=(models.Q(question__isnull=True, answer__isnull=False) |
+                       models.Q(question__isnull=False, answer__isnull=True)),
+                name='vote_one_target'
+            )
+        ]
     
     def __str__(self):
-        return f"{self.user.username} {self.get_vote_type_display()} on Answer {self.answer.id}"
+        target = self.question.title if self.question else f"Answer {self.answer.id}"
+        return f"{self.user.username} {self.get_vote_type_display()} on {target}"
 
 class Notification(models.Model):
     NOTIFICATION_TYPES = (
@@ -137,7 +146,7 @@ class Notification(models.Model):
     
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
     notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES)
-    content = models.TextField()  # e.g., "User X answered your question Y"
+    content = models.TextField()
     related_question = models.ForeignKey(Question, on_delete=models.CASCADE, null=True, blank=True)
     related_answer = models.ForeignKey(Answer, on_delete=models.CASCADE, null=True, blank=True)
     related_comment = models.ForeignKey(Comment, on_delete=models.CASCADE, null=True, blank=True)

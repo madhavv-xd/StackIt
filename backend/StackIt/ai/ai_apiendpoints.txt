@@ -1,0 +1,87 @@
+# API: StackIt RAG Chatbot (Context-Aware Assistant)
+
+POST /api/ai/chat/
+
+Description:
+  Returns an answer to the user's question using context from StackIt Q&A database.
+  Falls back to LLM if context is insufficient (and clearly states that).
+
+Authorization:
+  Not required (public endpoint)
+
+Request Headers:
+  Content-Type: application/json
+
+Request Body (JSON):
+{
+  "question": "<string> // User's question in plain text"
+}
+
+Response (200 OK):
+{
+  "answer": "<string> // AI-generated answer (Markdown formatted)"
+}
+
+Example Request:
+POST /api/ai/chat/
+Content-Type: application/json
+
+{
+  "question": "How to integrate Stripe with Django?"
+}
+
+Example Response:
+{
+  "answer": "StackIt does not have answers to this question yet. Here is an answer from the web:\n\nTo integrate Stripe..."
+}
+
+Errors:
+- 400: "No question provided"
+- 500: Model failure or API error
+
+
+----------------------------------------------------------------------------------------
+
+# API: AI-Assisted Answer Drafting
+
+POST /api/ai/draft-answer/
+
+Description:
+  Generates an AI-powered answer suggestion based on the question's title and description.
+  Intended to prefill the answer textbox when user clicks "Answer with AI" button.
+
+Authorization:
+  Required (JWT token)
+
+Request Headers:
+  Content-Type: application/json
+  Authorization: Bearer <your_jwt_token>
+
+Request Body (JSON):
+{
+  "question_id": <integer>
+}
+
+Response (200 OK):
+{
+  "answer": "<string> // Markdown-formatted AI-generated answer"
+}
+
+Example Request:
+POST /api/ai/draft-answer/
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "question_id": 15
+}
+
+Example Response:
+{
+  "answer": "# Using Django REST Framework\n\nTo get started, install it using pip:\n```bash\npip install djangorestframework\n```"
+}
+
+Errors:
+- 400: "question_id is required"
+- 404: "Question not found"
+- 500: Model failure or API error
