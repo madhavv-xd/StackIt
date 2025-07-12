@@ -1,20 +1,36 @@
 import { useState } from 'react';
-import { Bell, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { Bell, User } from 'lucide-react';
 
-export default function StackItNavbar() {
-  const [isSignedIn, setIsSignedIn] = useState(true); // Toggle this to test both states
+interface NavbarProps {
+  isAuthenticated: boolean;
+  onLogout: () => void;
+}
+
+export default function StackItNavbar({ isAuthenticated, onLogout }: NavbarProps) {
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
-//   const [showTimeFilter, setShowTimeFilter] = useState(false);
-  const navigate=useNavigate();
+  const navigate = useNavigate();
 
   const handleLogin = () => {
-    setIsSignedIn(true);
+    navigate('/auth');
   };
 
   const handleLogout = () => {
-    setIsSignedIn(false);
+    onLogout();
     setShowProfileDropdown(false);
+    navigate('/');
+  };
+
+  const handleHomeClick = () => {
+    if (isAuthenticated) {
+      navigate('/home');
+    } else {
+      navigate('/');
+    }
+  };
+
+  const handleAskQuestion = () => {
+    navigate('/ask');
   };
 
   return (
@@ -24,13 +40,28 @@ export default function StackItNavbar() {
       <nav className="px-6 py-4 border-b border-slate-700">
         <div className="flex items-center justify-between">
           {/* Logo */}
-          <div onClick={() => navigate("/")} className="text-2xl font-bold">
-          StackIt
-          </div>
+          <button 
+            onClick={handleHomeClick}
+            className="text-2xl font-bold hover:text-blue-300 transition-colors"
+          >
+            StackIt
+          </button>
+
+          {/* Center Navigation */}
+          {isAuthenticated && (
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={handleAskQuestion}
+                className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg font-medium transition-colors"
+              >
+                Ask Question
+              </button>
+            </div>
+          )}
 
           {/* Right Side - Login/User Actions */}
           <div className="flex items-center space-x-4">
-            {isSignedIn ? (
+            {isAuthenticated ? (
               <>
                 {/* Notification Bell */}
                 <button className="p-2 bg-gray-600 rounded-lg hover:bg-gray-500 transition-colors">
@@ -81,16 +112,6 @@ export default function StackItNavbar() {
           </div>
         </div>
       </nav>
-
-      {/* Demo Toggle Button */}
-      <div className="px-6 py-2 text-center border-b border-slate-700">
-        <button
-          onClick={() => setIsSignedIn(!isSignedIn)}
-          className="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded text-sm"
-        >
-          Toggle Sign In State (Demo)
-        </button>
-      </div>
     </div>
   );
 }

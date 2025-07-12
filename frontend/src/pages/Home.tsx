@@ -1,26 +1,41 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Search,
   ChevronDown,
-  Eye,
   MessageSquare,
 } from "lucide-react";
+import { BASE_URL } from '../config';
 
-import { useNavigate } from "react-router-dom";
+interface Question {
+  id: number;
+  title: string;
+  description: string;
+  user: {
+    id: number;
+    username: string;
+  };
+  tags: Array<{
+    id: number;
+    name: string;
+  }>;
+  created_at: string;
+  num_answers: number;
+  vote_score: number;
+}
 
 const QAHomepage = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("Answers");
-  const [sortBy, setSortBy] = useState("By rating");
   const [searchQuery, setSearchQuery] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-
-  // const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState("Newest");
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
-  const navigate=useNavigate();
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const filterOptions = [
     "Newest",
-    "Unanswered",
+    "Unanswered", 
     "Active",
     "Bountied",
     "Hot",
@@ -28,56 +43,46 @@ const QAHomepage = () => {
     "Month",
   ];
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    if (e.key === "Enter") {
-      console.log("Searching for:", searchQuery);
-    }
+  // Fetch questions from API
+  useEffect(() => {
+    const fetchQuestions = async () => {
+      try {
+        const response = await fetch(`${BASE_URL}api/questions/`);
+        if (response.ok) {
+          const data = await response.json();
+          setQuestions(data);
+        } else {
+          setError('Failed to fetch questions');
+        }
+      } catch (error) {
+        console.error('Error fetching questions:', error);
+        setError('Network error while fetching questions');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchQuestions();
+  }, []);
+
+  const handleQuestionClick = (questionId: number) => {
+    navigate(`/question/${questionId}`);
   };
 
-  // Sample data
-  const questions = [
-    {
-      id: 1,
-      title:
-        "How to join 2 columns in a data set to make a separate column in SQL",
-      description:
-        "I do not know the code for it as I am a beginner. As an example what I need to do is like there is a column 1 containing First name and column 2 consists of last name I want a column to combine...",
-      tags: ["sql", "database"],
-      answers: 5,
-      views: 234,
-      user: "John Doe",
-      timeAgo: "5 ans",
-    },
-    {
-      id: 2,
-      title: "Is it possible to survive in a black hole?",
-      description:
-        "Understanding the physics behind black holes and what happens to matter and energy...",
-      tags: ["astronomy", "astrophysics", "black-hole"],
-      answers: 24,
-      views: 1523,
-      user: "Christina Sorokina",
-      timeAgo: "3 ans",
-      upvotes: 815,
-    },
-    {
-      id: 3,
-      title: "Best practices for React component optimization",
-      description:
-        "What are the most effective ways to optimize React components for better performance...",
-      tags: ["react", "performance"],
-      answers: 8,
-      views: 456,
-      user: "Alex Smith",
-      timeAgo: "2 ans",
-    },
-  ];
-
-  // const handleSearch = (e) => {
-  //   e.preventDefault();
-  //   console.log("Searching for:", searchQuery);
-  // };
+  const timeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+    
+    if (diffInHours < 1) return 'just now';
+    if (diffInHours < 24) return `${diffInHours}h ago`;
+    
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays < 30) return `${diffInDays}d ago`;
+    
+    const diffInMonths = Math.floor(diffInDays / 30);
+    return `${diffInMonths}mo ago`;
+  };
 
   const filteredQuestions = questions.filter(
     (q) =>
@@ -85,7 +90,32 @@ const QAHomepage = () => {
       q.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const totalPages = Math.ceil(filteredQuestions.length / 10);          // for pagination
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading questions...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-100 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-100 relative">
@@ -93,7 +123,10 @@ const QAHomepage = () => {
         <div className="max-w-6xl mx-auto">
           <div className="flex items-center space-x-4">
             {/* Ask New Question Button */}
-            <button onClick={()=> navigate("/add-new-ques")} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium">
+            <button 
+              onClick={() => navigate('/ask')}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            >
               Ask New question
             </button>
 
@@ -103,13 +136,13 @@ const QAHomepage = () => {
                 onClick={() => setShowFilterDropdown(!showFilterDropdown)}
                 className="flex items-center space-x-2 border border-gray-500 text-gray-300 px-4 py-2 rounded-lg hover:bg-gray-800 hover:border-gray-400 transition-colors"
               >
-                <span className="font-medium">{selectedFilter}</span>
-                {/* <span className="text-gray-500">Unanswered</span> */}
-                <div className="flex items-center space-x-1">
-                  <span className="text-xs text-gray-400">more</span>
-                  <ChevronDown className="w-4 h-4 text-gray-400" />
-                </div>w
-              </button>
+                  <span className="font-medium">{selectedFilter}</span>
+                  {/* <span className="text-gray-500">Unanswered</span> */}
+                  <div className="flex items-center space-x-1">
+                    <span className="text-xs text-gray-400">more</span>
+                    <ChevronDown className="w-4 h-4 text-gray-400" />
+                  </div>
+                </button>
 
               {/* Dropdown Menu */}
               {showFilterDropdown && (
@@ -133,19 +166,6 @@ const QAHomepage = () => {
                 </div>
               )}
             </div>
-
-            {/* Search Bar
-            <div className="flex-1 max-w-md relative">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={handleSearch}
-                placeholder="Search"
-                className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-2 pr-10 text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              <Search className="w-5 h-5 text-gray-400 absolute right-3 top-2.5" />
-            </div> */}
           </div>
         </div>
       </div>
@@ -207,43 +227,43 @@ const QAHomepage = () => {
               {filteredQuestions.map((question) => (
                 <div
                   key={question.id}
-                  className="border-b pb-6 last:border-b-0"
+                  className="border-b pb-6 last:border-b-0 cursor-pointer hover:bg-gray-50 p-4 rounded-lg transition-colors"
+                  onClick={() => handleQuestionClick(question.id)}
                 >
-                  <h3 className="text-lg font-semibold text-gray-800 mb-2 hover:text-blue-600 cursor-pointer">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-2 hover:text-blue-600">
                     {question.title}
                   </h3>
                   <p className="text-gray-600 mb-3 text-sm">
-                    {question.description}
+                    {question.description.replace(/<[^>]*>/g, '').substring(0, 200)}...
                   </p>
 
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center space-x-4">
                       <span className="text-sm text-gray-600 font-bold">
-                        - {question.user}
+                        - {question.user.username}
                       </span>
                       <span className="text-sm text-gray-500">
-                        {question.timeAgo}
+                        {timeAgo(question.created_at)}
                       </span>
                     </div>
                     <div className="flex items-center space-x-4 text-sm text-gray-500">
                       <span className="flex items-center space-x-1">
                         <MessageSquare className="w-4 h-4" />
-                        <span>{question.answers} answers</span>
+                        <span>{question.num_answers} answers</span>
                       </span>
                       <span className="flex items-center space-x-1">
-                        <Eye className="w-4 h-4" />
-                        <span>{question.views} views</span>
+                        <span className="text-green-600 font-semibold">↑{question.vote_score}</span>
                       </span>
                     </div>
                   </div>
 
                   <div className="flex space-x-2">
-                    {question.tags.map((tag, index) => (
+                    {question.tags.map((tag) => (
                       <span
-                        key={index}
+                        key={tag.id}
                         className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs font-medium hover:bg-gray-200 cursor-pointer"
                       >
-                        {tag}
+                        {tag.name}
                       </span>
                     ))}
                   </div>

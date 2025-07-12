@@ -5,9 +5,6 @@ import {
   Strikethrough,
   List,
   ListOrdered,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
   Link,
   Image,
   Smile,
@@ -23,18 +20,29 @@ import {
   Heading3,
 } from 'lucide-react';
 
+// Define types for the Button component
+interface ButtonProps {
+  children: React.ReactNode;
+  onClick: () => void;
+  disabled?: boolean;
+  variant?: 'default' | 'ghost' | 'outline' | 'secondary';
+  size?: 'sm' | 'md' | 'lg';
+  className?: string;
+  title?: string;
+}
+
 // Local Button Component
-const Button = ({ children, onClick, disabled, variant = 'default', size = 'md', className = '', ...props }) => {
+const Button = ({ children, onClick, disabled = false, variant = 'default', size = 'md', className = '', ...props }: ButtonProps) => {
   const baseClasses = 'inline-flex items-center justify-center font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
   
-  const variants = {
+  const variants: Record<string, string> = {
     default: 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800',
     ghost: 'bg-transparent hover:bg-gray-100 active:bg-gray-200 text-gray-700',
     outline: 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 active:bg-gray-100',
     secondary: 'bg-gray-200 text-gray-900 hover:bg-gray-300 active:bg-gray-400',
   };
 
-  const sizes = {
+  const sizes: Record<string, string> = {
     sm: 'px-2 py-1 text-xs rounded',
     md: 'px-3 py-2 text-sm rounded-md',
     lg: 'px-4 py-3 text-base rounded-lg',
@@ -65,7 +73,7 @@ const Textarea = ({ className = '', ...props }) => {
 };
 
 // Markdown to HTML converter for preview
-const markdownToHtml = (markdown) => {
+const markdownToHtml = (markdown: string): string => {
   return markdown
     .replace(/^### (.*$)/gm, '<h3>$1</h3>')
     .replace(/^## (.*$)/gm, '<h2>$1</h2>')
@@ -94,8 +102,6 @@ export function RichTextEditor({ value, onChange, placeholder = "Start typing...
   const [history, setHistory] = useState<string[]>([value]);
   const [historyIndex, setHistoryIndex] = useState(0);
   const [previewMode, setPreviewMode] = useState(false);
-  const [selectionStart, setSelectionStart] = useState(0);
-  const [selectionEnd, setSelectionEnd] = useState(0);
 
   // Auto-save to history
   useEffect(() => {
@@ -209,12 +215,13 @@ export function RichTextEditor({ value, onChange, placeholder = "Start typing...
       case 'numbered':
         insertText('1. ', '');
         break;
-      case 'link':
+      case 'link': {
         const url = prompt('Enter URL:');
         if (url) {
           insertText(`[${selectedText || 'Link text'}](${url})`, '', false);
         }
         break;
+      }
       case 'hr':
         insertText('\n---\n', '', false);
         break;
@@ -276,8 +283,7 @@ export function RichTextEditor({ value, onChange, placeholder = "Start typing...
   const handleSelectionChange = () => {
     const textarea = textareaRef.current;
     if (textarea) {
-      setSelectionStart(textarea.selectionStart);
-      setSelectionEnd(textarea.selectionEnd);
+      // Handle selection change if needed
     }
   };
 
@@ -450,8 +456,14 @@ export function RichTextEditor({ value, onChange, placeholder = "Start typing...
 }
 
 // Example usage component
-const RichTextEditorExample = () => {
-  const [content, setContent] = useState(`# Welcome to the Rich Text Editor
+interface RichTextEditorExampleProps {
+  onChange?: (content: string) => void;
+  value?: string;
+  placeholder?: string;
+}
+
+const RichTextEditorExample = ({ onChange, value, placeholder }: RichTextEditorExampleProps = {}) => {
+  const [content, setContent] = useState(value || `# Welcome to the Rich Text Editor
 
 This is a **powerful** and *flexible* markdown editor with:
 
@@ -477,13 +489,19 @@ console.log("Hello, World!");
 
 Try switching to preview mode to see the rendered output!`);
 
+  const handleContentChange = (newContent: string) => {
+    setContent(newContent);
+    if (onChange) {
+      onChange(newContent);
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-4">Rich Text Editor Demo</h1>
       <RichTextEditor
         value={content}
-        onChange={setContent}
-        placeholder="Start writing your content here..."
+        onChange={handleContentChange}
+        placeholder={placeholder || "Start writing your content here..."}
         height="400px"
       />
     </div>

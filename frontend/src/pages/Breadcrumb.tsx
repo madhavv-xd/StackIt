@@ -1,26 +1,157 @@
-import React, { useState } from 'react';
-import { ChevronRight, ChevronUp, ChevronDown, Bell, User, Bold, Italic, Strikethrough, List, ListOrdered, Link2, Image, Code, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { ChevronRight, ChevronUp, ChevronDown, Bold, Italic, Strikethrough, List, ListOrdered, Link2, Code, Image, AlignLeft, AlignCenter, AlignRight} from 'lucide-react';
+import { BASE_URL } from '../config';
+
+interface User {
+  id: number;
+  username: string;
+}
+
+interface Tag {
+  id: number;
+  name: string;
+}
+
+interface Question {
+  id: number;
+  title: string;
+  description: string;
+  user: User;
+  tags: Tag[];
+  created_at: string;
+  num_answers: number;
+  vote_score: number;
+}
+
+interface Answer {
+  id: number;
+  user: User;
+  content: string;
+  created_at: string;
+  is_accepted: boolean;
+  vote_score: number;
+}
 
 export default function QuestionDetailPage() {
-  const [isSignedIn, setIsSignedIn] = useState(true);
-  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [question, setQuestion] = useState<Question | null>(null);
+  const [answers, setAnswers] = useState<Answer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [answerText, setAnswerText] = useState('');
+  const [submittingAnswer, setSubmittingAnswer] = useState(false);
 
-  const handleLogin = () => {
-    setIsSignedIn(true);
-  };
+  useEffect(() => {
+    const fetchQuestionAndAnswers = async () => {
+      if (!id) return;
 
-  const handleLogout = () => {
-    setIsSignedIn(false);
-    setShowProfileDropdown(false);
-  };
+      try {
+        // Fetch question details
+        const questionResponse = await fetch(`${BASE_URL}api/questions/${id}/`);
+        if (!questionResponse.ok) {
+          setError('Question not found');
+          return;
+        }
+        const questionData = await questionResponse.json();
+        setQuestion(questionData);
 
-  const handleSubmit = () => {
-    if (answerText.trim()) {
-      alert('Answer submitted!');
-      setAnswerText('');
+        // Fetch answers
+        const answersResponse = await fetch(`${BASE_URL}api/questions/${id}/answers/`);
+        if (answersResponse.ok) {
+          const answersData = await answersResponse.json();
+          setAnswers(answersData);
+        }
+      } catch (error) {
+        console.error('Error fetching question:', error);
+        setError('Failed to load question');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchQuestionAndAnswers();
+  }, [id]);
+
+  const handleSubmitAnswer = async () => {
+    if (!answerText.trim() || !id) return;
+
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      navigate('/auth');
+      return;
+    }
+
+    setSubmittingAnswer(true);
+    try {
+      const response = await fetch(`${BASE_URL}api/questions/${id}/answers/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          content: answerText
+        })
+      });
+
+      if (response.ok) {
+        const newAnswer = await response.json();
+        setAnswers([...answers, newAnswer]);
+        setAnswerText('');
+      } else {
+        setError('Failed to submit answer');
+      }
+    } catch (error) {
+      console.error('Error submitting answer:', error);
+      setError('Network error while submitting answer');
+    } finally {
+      setSubmittingAnswer(false);
     }
   };
+
+  const timeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+    
+    if (diffInHours < 1) return 'just now';
+    if (diffInHours < 24) return `${diffInHours}h ago`;
+    
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays < 30) return `${diffInDays}d ago`;
+    
+    const diffInMonths = Math.floor(diffInDays / 30);
+    return `${diffInMonths}mo ago`;
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading question...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !question) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{error || 'Question not found'}</p>
+          <button 
+            onClick={() => navigate('/home')} 
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          >
+            Back to Questions
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
@@ -155,7 +286,7 @@ export default function QuestionDetailPage() {
           {/* Submit Button */}
           <div className="flex justify-end mt-4">
             <button
-              onClick={handleSubmit}
+              onClick={handleSubmitAnswer}
               className="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-lg font-medium transition-colors"
             >
               Submit
