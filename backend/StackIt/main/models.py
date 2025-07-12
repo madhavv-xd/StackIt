@@ -25,7 +25,7 @@ class Question(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
     num_answers = models.PositiveIntegerField(default=0, editable=False)
-    vote_score = models.IntegerField(default=0, editable=False)  # Net votes (upvotes - downvotes)
+    vote_score = models.IntegerField(default=0, editable=False)
     
     class Meta:
         ordering = ['-created_at']
@@ -106,7 +106,6 @@ class Vote(models.Model):
         
         super().save(*args, **kwargs)
         
-        # Update vote_score for question or answer
         target = self.question if self.question else self.answer
         if is_new:
             target.vote_score += self.vote_type
@@ -123,8 +122,8 @@ class Vote(models.Model):
     
     class Meta:
         unique_together = [
-            ('user', 'question'),  # Prevent multiple votes on same question
-            ('user', 'answer'),    # Prevent multiple votes on same answer
+            ('user', 'question'),
+            ('user', 'answer'),
         ]
         constraints = [
             models.CheckConstraint(

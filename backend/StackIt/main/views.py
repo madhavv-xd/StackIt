@@ -3,7 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Question, Tag, Answer, Comment, Vote, Notification
-from .serializers import QuestionSerializer, TagSerializer, AnswerSerializer, VoteSerializer
+from .serializers import QuestionSerializer, TagSerializer, AnswerSerializer, VoteSerializer, CommentSerializer
 from django.db.models import Q
 from rest_framework.exceptions import NotFound
 
@@ -134,3 +134,40 @@ class AnswerViewSet(viewsets.ModelViewSet):
                 return Response({'status': 'Vote removed'}, status=204)
             except Vote.DoesNotExist:
                 raise PermissionDenied("You have not voted on this answer.")
+            
+
+class CommentViewSet(viewsets.ModelViewSet):
+    serializer_class = CommentSerializer
+    permission_classes = [IsOwnerOrAdminOrReadOnly]
+
+    def get_queryset(self):
+        question_id = self.kwargs.get('question_id')
+        answer_id = self.kwargs.get('answer_id')
+        if question_id and answer_id:
+            try:
+                answer = Answer.objects.get(id=answer_id, question_id=question_id, is_active=True)
+            except Answer.DoesNotExist:
+                raise NotFound("Answer does not exist or is not active for this question.")
+            return Comment.objects.filter(answer_id=answer_id, is_active=True)
+        elif question_id:
+            return Comment.objects.filter(question_id=question_id, is_active=True)
+        raise NotFound("Must specify either question_id or both question_id and answer_id.")
+
+    def perform_create(self, serializer):
+        question_id = self.kwargs.get('question_id')
+        answer_id = self.kwargs.get('answer_id')
+        if answer_id:
+            try:
+                answer = Answer.objects.get(id=answer_id, question_id=question_id, is_active=True)
+            except Answer.DoesNotExist:
+                raise NotFound("Answer does not exist or is not active for this question.")
+        elif not question_id:
+            raise NotFound("Must specify either question_id or both question_id and answer_id.")
+        serializer.save(user=self.request.user, question_id=question_id, answer_id=answer_id)
+
+    def perform_update(self, serializer):
+        serializer.save()
+
+    def perform_destroy(self, obj):
+        obj.is_active = False
+        obj.save()
