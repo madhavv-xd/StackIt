@@ -1,0 +1,59 @@
+
+===============================
+📌 StackIt API - Auth Profile
+===============================
+
+1. ✅ REGISTER USER
+--------------------
+POST /api/auth/register/
+
+Request Body (JSON):
+{
+  "username": "rachit",
+  "password": "testpass123",
+  "email": "rachit@example.com",
+  "full_name": "Rachit Goyal"
+}
+
+Response:
+{
+  "message": "User registered successfully"
+}
+
+--------------------------------
+
+2. ✅ LOGIN USER
+--------------------
+POST /api/auth/login/
+
+Request Body (JSON):
+{
+  "username": "rachit",
+  "password": "testpass123"
+}
+
+Response:
+{
+  "refresh": "<refresh_token>",
+  "access": "<access_token>"
+}
+
+--------------------------------
+
+3. ✅ GET USER PROFILE
+--------------------
+GET /api/auth/profile/
+
+Headers:
+Authorization: Bearer <access_token>
+
+Response:
+{
+  "username": "rachit",
+  "profile": {
+    "full_name": "Rachit Goyal",
+    "email": "rachit@example.com",
+    "created_at": "2025-07-12T08:30:00Z"
+  }
+}
+
