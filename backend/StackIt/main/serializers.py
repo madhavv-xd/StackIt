@@ -18,6 +18,17 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ['id', 'username']
 
+class VoteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Vote
+        fields = ['id', 'vote_type']
+        read_only_fields = ['id']
+
+    def validate_vote_type(self, value):
+        if value not in [1, -1]:
+            raise serializers.ValidationError("Vote type must be 1 (upvote) or -1 (downvote).")
+        return value
+
 class AnswerSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     
@@ -40,8 +51,8 @@ class QuestionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Question
-        fields = ['id', 'title', 'description', 'user', 'tags', 'tag_names', 'created_at', 'updated_at', 'is_active', 'num_answers']
-        read_only_fields = ['id', 'user', 'tags', 'created_at', 'updated_at', 'is_active', 'num_answers']
+        fields = ['id', 'title', 'description', 'user', 'tags', 'tag_names', 'created_at', 'updated_at', 'is_active', 'num_answers', 'vote_score']
+        read_only_fields = ['id', 'user', 'tags', 'created_at', 'updated_at', 'is_active', 'num_answers', 'vote_score']
 
     def validate_tag_names(self, value):
         for name in value:
